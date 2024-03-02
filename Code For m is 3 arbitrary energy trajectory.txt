@@ -1,0 +1,64 @@
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+import sympy as sy
+
+#(-2uR^2)/(r^2(r/R)^m+(R/r)^m)^2
+RR, uu, mm, ll = sy.symbols('R u m l')
+rr = sy.Symbol('r')
+V = sy.Function('V')
+Ve = sy.Function('Ve')
+V = (-2*uu*RR**2)/(rr**2*((rr/RR)**mm+(RR/rr)**mm)**2)
+Ve = V + ll**2/(2*rr)
+dV = sy.diff(V, rr)
+dVe = sy.diff(Ve, rr)
+
+np_V = sy.lambdify([rr, uu, RR, mm], V)
+np_dV = sy.lambdify([rr, uu, RR, mm], dV)
+np_Ve = sy.lambdify([rr, uu, RR, mm, ll], Ve)
+np_dVe = sy.lambdify([rr, uu, RR, mm, ll], dVe)
+
+# Initial Conditions.
+r_0 = 1.74
+r_dot_0 = 0.1
+phi_0 = 0.0
+ang_mom = 1
+m = 2
+
+# Initial energy
+energy_0 = (1/2 * r_dot_0**2) + np_Ve(r_0, 1, 2, 3, 0)
+print(energy_0)
+
+def odesystem(theta, y, u, R, m, l):
+    # y[0] = r
+    # y[1] = dr/dtheta
+
+    dy0_dtheta = y[1]  # dr/dtheta
+    dy1_dtheta = -y[0] - (1/(m*l**2 * y[0]**2)) * np_dVe(y[0], u, R, m,l)       #Orbit Equation
+
+    return [dy0_dtheta, dy1_dtheta]
+
+
+theta_span = (0, 10)  
+theta_values = np.linspace(theta_span[0], theta_span[1], 100)
+
+#Initial Conditions
+r_initial = 1.0  
+dr_dtheta_initial = 0.0  
+initial_conditions = [r_initial, dr_dtheta_initial]
+
+
+u = 1.0  
+R = 1.0  
+#m = 2.0  
+l = 1.0  
+
+solution = solve_ivp(
+    fun=lambda theta, y: odesystem(theta, y, u, R, m, l),
+    t_span=theta_span,
+    y0=initial_conditions,
+    t_eval=theta_values,
+    method='RK45')
+
+plt.polar(solution.t, solution.y[0], label='r(theta)')
+plt.show()
