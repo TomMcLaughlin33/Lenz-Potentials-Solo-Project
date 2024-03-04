@@ -1,0 +1,38 @@
+import sympy as sy
+#(-2uR^2)/(r^2(r/R)^m+(R/r)^m)^2
+RR,uu,mm,ll = sy.symbols('R u m l')
+rr = sy.Symbol('r')
+V = sy.Function('V')
+Ve = sy.Function('Ve')
+V = (-2*uu*RR**2)/(rr**2*((rr/RR)**mm+(RR/rr)**mm)**2)
+Ve = V + ll**2/(2*rr)
+dV = sy.diff(V,rr)
+dV
+dVe = sy.diff(Ve,rr)
+np_V = sy.lambdify([rr,uu,RR,mm],V)
+np_dV = sy.lambdify([rr,uu,RR,mm],dV)
+np_Ve = sy.lambdify([rr,uu,RR,mm,ll],Ve)
+np_dVe = sy.lambdify([rr,uu,RR,mm,ll],dVe)
+
+r_0 = 1.74
+r_dot_0 = 0
+phi_0 = 0.0
+ang_mom = 1.0
+
+plt.figure()
+plt.plot(np.arange(0.1,3,0.01),np_Ve(np.arange(0.1,3,0.01),u,R,m,ang_mom))
+plt.plot(np.arange(0.1,3,0.01),np_dVe(np.arange(0.1,3,0.01),u,R,m,ang_mom))
+energy_0 = (1/2 * r_dot_0**2) + np_Ve(r_0,u,R,m,ang_mom)
+plt.axhline(energy_0, color='r', linestyle='--')
+def odeV(t, y,u,R,m,l): # The Differential equations as they appear as (\dotr = y[1],   \ddotr = l^2/r^3 - dUeff/dr,  \dot\theta = l/r^2)
+      return [y[1], -np_dV(y[0],u,R,m)+l**2 /(y[0]**3), l / (y[0]**2)]
+t_max = 50
+sol = solve_ivp(odeV, [0, t_max], [r_0, r_dot_0, phi_0], args=(u, R, m, ang_mom),dense_output=True,abserr=1.0e-8, relerr=1.0e-8)
+t_ = np.linspace(0, t_max, 1000)
+z_ = sol.sol(t_)
+plt.figure()
+plt.plot(t_,z_.T[:,0])
+
+plt.figure()
+fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+ax.plot(z_.T[:,2],z_.T[:,0])
